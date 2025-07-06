@@ -1,0 +1,17 @@
+.dub
+docs.json
+__dummy.html
+docs/
+/handy-http-handlers
+handy-http-handlers.so
+handy-http-handlers.dylib
+handy-http-handlers.dll
+handy-http-handlers.a
+handy-http-handlers.lib
+handy-http-handlers-test-*
+*.exe
+*.pdb
+*.o
+*.obj
+*.lst
+*.a
