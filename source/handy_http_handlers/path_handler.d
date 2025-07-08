@@ -1,9 +1,18 @@
+/**
+ * Defines a path-matching request handler, that will match incoming requests
+ * against a set of mappings based on the URL and HTTP method, and call a
+ * handler depending on what's matched.
+ */
 module handy_http_handlers.path_handler;
 
 import handy_http_primitives;
 import path_matcher;
 import slf4d;
 
+/**
+ * The key used to read and write path-handler related data to the request's
+ * context data attribute.
+ */
 private immutable REQUEST_CONTEXT_DATA_KEY = "pathHandler";
 
 /// Internal struct holding details about a handler mapping.
