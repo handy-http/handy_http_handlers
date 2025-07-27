@@ -26,17 +26,18 @@ private struct HandlerMapping {
 }
 
 /// Maps each HTTP method to a bit value, so we can use bit-masking for handler mappings.
-immutable ushort[HttpMethod] HTTP_METHOD_BITS = [
-    HttpMethod.GET: 1 >> 0,
-    HttpMethod.HEAD: 1 >> 1,
-    HttpMethod.POST: 1 >> 2,
-    HttpMethod.PUT: 1 >> 3,
-    HttpMethod.DELETE: 1 >> 4,
-    HttpMethod.CONNECT: 1 >> 5,
-    HttpMethod.OPTIONS: 1 >> 6,
-    HttpMethod.TRACE: 1 >> 7,
-    HttpMethod.PATCH: 1 >> 8
-];
+ushort getMethodBit(in string method) {
+    if (method == HttpMethod.GET) return 1;
+    if (method == HttpMethod.HEAD) return 2;
+    if (method == HttpMethod.POST) return 4;
+    if (method == HttpMethod.PUT) return 8;
+    if (method == HttpMethod.DELETE) return 16;
+    if (method == HttpMethod.CONNECT) return 32;
+    if (method == HttpMethod.OPTIONS) return 64;
+    if (method == HttpMethod.TRACE) return 128;
+    if (method == HttpMethod.PATCH) return 256;
+    throw new Exception("Unknown HTTP method: " ~ method);
+}
 
 /**
  * Computes a bitmask from a list of HTTP methods.
@@ -47,7 +48,7 @@ immutable ushort[HttpMethod] HTTP_METHOD_BITS = [
 ushort methodMaskFromMethods(HttpMethod[] methods) {
     ushort mask = 0;
     foreach (method; methods) {
-        mask |= HTTP_METHOD_BITS[method];
+        mask |= getMethodBit(method);
     }
     return mask;
 }
@@ -149,7 +150,7 @@ class PathHandler : HttpRequestHandler {
      * Returns: This path handler, for method chaining.
      */
     PathHandler addMapping(HttpMethod method, string pattern, HttpRequestHandler handler) {
-        this.mappings ~= HandlerMapping(handler, HTTP_METHOD_BITS[method], [pattern]);
+        this.mappings ~= HandlerMapping(handler, getMethodBit(method), [pattern]);
         return this;
     }
     ///
@@ -159,7 +160,7 @@ class PathHandler : HttpRequestHandler {
     }
     ///
     PathHandler addMapping(HttpMethod method, string[] patterns, HttpRequestHandler handler) {
-        this.mappings ~= HandlerMapping(handler, HTTP_METHOD_BITS[method], patterns.idup);
+        this.mappings ~= HandlerMapping(handler, getMethodBit(method), patterns.idup);
         return this;
     }
     ///
@@ -211,7 +212,7 @@ class PathHandler : HttpRequestHandler {
      * Returns: The handler that matches the request, or null if none is found.
      */
     private HttpRequestHandler findMappedHandler(ref ServerHttpRequest request) {
-        ushort methodBit = HTTP_METHOD_BITS[request.method];
+        const ushort methodBit = getMethodBit(request.method);
         foreach (HandlerMapping mapping; mappings) {
             if ((mapping.methodsMask & methodBit) > 0) {
                 foreach (string pattern; mapping.patterns) {
@@ -257,7 +258,8 @@ unittest {
         .addMapping(HttpMethod.GET, "/home", new SimpleOkHandler())
         .addMapping(HttpMethod.GET, "/users", new SimpleOkHandler())
         .addMapping(HttpMethod.GET, "/users/:id:ulong", new SimpleOkHandler())
-        .addMapping(HttpMethod.GET, "/api/*", new SimpleOkHandler());
+        .addMapping(HttpMethod.GET, "/api/*", new SimpleOkHandler())
+        .addMapping(HttpMethod.POST, "/api/do-something", new SimpleOkHandler());
 
     struct RequestAndResponse {
         ServerHttpRequest request;
@@ -291,4 +293,6 @@ unittest {
     assert(result7.response.status == HttpStatus.NOT_FOUND);
     auto result8 = generateHandledData(HttpMethod.GET, "/");
     assert(result8.response.status == HttpStatus.NOT_FOUND);
+    auto result9 = generateHandledData(HttpMethod.POST, "/api/do-something");
+    assert(result9.response.status == HttpStatus.OK);
 }
